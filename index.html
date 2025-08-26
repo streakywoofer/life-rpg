@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Life Habit Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f2f2f2;
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    .category {
+      background: #fff;
+      padding: 15px;
+      margin: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .habit {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+    }
+
+    .habit input {
+      margin-right: 10px;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    canvas {
+      max-width: 600px;
+      margin: 30px auto;
+      display: block;
+    }
+
+    button {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>7 Faces of Life Habit Tracker</h1>
+
+<div class="container" id="habit-container">
+  <!-- Categories will be inserted here -->
+</div>
+
+<button onclick="updateChart()">Update Chart</button>
+
+<canvas id="radarChart"></canvas>
+
+<script>
+  const categories = [
+    { name: "Health", habits: ["Exercise", "Healthy Eating", "Sleep 7+ hrs", "Hydration"] },
+    { name: "Wealth", habits: ["Save Money", "Track Spending", "Invest", "Budgeting"] },
+    { name: "Relationships", habits: ["Quality Time", "Listen Actively", "Acts of Kindness", "Express Gratitude"] },
+    { name: "Career", habits: ["Skill Learning", "Networking", "Focus Work", "Review Goals"] },
+    { name: "Personal Growth", habits: ["Read Books", "Reflect Daily", "Limit Social Media", "Journal"] },
+    { name: "Spirituality", habits: ["Meditation", "Prayer", "Gratitude Practice", "Mindfulness"] },
+    { name: "Recreation", habits: ["Hobby Time", "Nature Walks", "Music or Art", "Fun Activity"] },
+  ];
+
+  const habitContainer = document.getElementById("habit-container");
+
+  categories.forEach((category, catIndex) => {
+    const div = document.createElement("div");
+    div.className = "category";
+    div.innerHTML = `<h2>${category.name}</h2>`;
+    category.habits.forEach((habit, habitIndex) => {
+      div.innerHTML += `
+        <div class="habit">
+          <label>
+            <input type="checkbox" 
+                   data-category="${catIndex}" 
+                   data-habit="${habitIndex}" 
+                   onchange="trackPoints(this)">
+            ${habit}
+          </label>
+        </div>
+      `;
+    });
+    habitContainer.appendChild(div);
+  });
+
+  let points = Array(categories.length).fill(0);
+
+  function trackPoints(checkbox) {
+    const cat = parseInt(checkbox.dataset.category);
+    points[cat] += checkbox.checked ? 1 : -1;
+  }
+
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  const radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: categories.map(c => c.name),
+      datasets: [{
+        label: 'Life Balance',
+        data: points,
+        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+        borderColor: 'rgba(0, 123, 255, 1)',
+        borderWidth: 2,
+        pointBackgroundColor: 'rgba(0, 123, 255, 1)'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        r: {
+          angleLines: { display: true },
+          suggestedMin: 0,
+          suggestedMax: 4
+        }
+      }
+    }
+  });
+
+  function updateChart() {
+    radarChart.data.datasets[0].data = points;
+    radarChart.update();
+  }
+</script>
+
+</body>
+</html>
