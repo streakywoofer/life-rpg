@@ -2,68 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Life Habit Tracker</title>
+  <title>Habit Tracker with Calendars</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
       background: #f2f2f2;
+      padding: 20px;
     }
-
-    h1, h2 {
+    h1 {
       text-align: center;
     }
-
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
     .category {
       background: #fff;
       padding: 15px;
-      margin: 10px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
     }
-
+    h2 {
+      margin-top: 0;
+    }
     .habit {
-      display: flex;
-      justify-content: space-between;
-      margin: 5px 0;
+      margin-bottom: 20px;
     }
-
-    .habit input {
-      margin-right: 10px;
+    .habit label {
+      font-weight: bold;
     }
-
-    .container {
+    .calendar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-top: 8px;
     }
-
-    canvas {
+    .calendar .day {
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+      text-align: center;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      user-select: none;
+    }
+    .day.completed {
+      background-color: #4caf50;
+      color: white;
+    }
+    .chart-container {
       max-width: 600px;
-      margin: 30px auto;
-      display: block;
+      margin: 20px auto;
     }
-
     button {
       display: block;
-      margin: 20px auto;
+      margin: 15px auto;
       padding: 10px 20px;
       font-size: 16px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
 <h1>7 Faces of Life Habit Tracker</h1>
-
-<div class="container" id="habit-container">
-  <!-- Categories will be inserted here -->
-</div>
+<div class="container" id="tracker"></div>
 
 <button onclick="updateChart()">Update Chart</button>
 
-<canvas id="radarChart"></canvas>
+<div class="chart-container">
+  <canvas id="radarChart"></canvas>
+</div>
 
 <script>
   const categories = [
@@ -76,33 +89,59 @@
     { name: "Recreation", habits: ["Hobby Time", "Nature Walks", "Music or Art", "Fun Activity"] },
   ];
 
-  const habitContainer = document.getElementById("habit-container");
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth(); // 0-based
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  categories.forEach((category, catIndex) => {
-    const div = document.createElement("div");
-    div.className = "category";
-    div.innerHTML = `<h2>${category.name}</h2>`;
-    category.habits.forEach((habit, habitIndex) => {
-      div.innerHTML += `
-        <div class="habit">
-          <label>
-            <input type="checkbox" 
-                   data-category="${catIndex}" 
-                   data-habit="${habitIndex}" 
-                   onchange="trackPoints(this)">
-            ${habit}
-          </label>
-        </div>
-      `;
-    });
-    habitContainer.appendChild(div);
-  });
-
+  const tracker = document.getElementById("tracker");
   let points = Array(categories.length).fill(0);
 
-  function trackPoints(checkbox) {
-    const cat = parseInt(checkbox.dataset.category);
-    points[cat] += checkbox.checked ? 1 : -1;
+  categories.forEach((cat, ci) => {
+    const catDiv = document.createElement("div");
+    catDiv.className = "category";
+    catDiv.innerHTML = `<h2>${cat.name}</h2>`;
+    cat.habits.forEach((habit, hi) => {
+      const habitId = `cat${ci}_hab${hi}`;
+      const habitDiv = document.createElement("div");
+      habitDiv.className = "habit";
+      habitDiv.innerHTML = `<label>${habit}</label><div class="calendar" id="${habitId}"></div><div>Done times: <span id="${habitId}_count">0</span></div>`;
+      catDiv.appendChild(habitDiv);
+      tracker.appendChild(catDiv);
+
+      renderCalendar(habitId, habitId + "_count");
+    });
+  });
+
+  function renderCalendar(calId, countId) {
+    const cal = document.getElementById(calId);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const div = document.createElement("div");
+      div.className = "day";
+      div.textContent = d;
+      if (localStorage.getItem(calId + '_' + dateStr)) {
+        div.classList.add("completed");
+      }
+      div.addEventListener("click", () => toggleDay(div, calId, dateStr, countId));
+      cal.appendChild(div);
+    }
+    updateCount(calId, countId);
+  }
+
+  function toggleDay(div, calId, dateStr, countId) {
+    const key = calId + '_' + dateStr;
+    if (div.classList.toggle("completed")) {
+      localStorage.setItem(key, true);
+    } else {
+      localStorage.removeItem(key);
+    }
+    updateCount(calId, countId);
+  }
+
+  function updateCount(calId, countId) {
+    const spans = document.querySelectorAll(`#${calId} .completed`);
+    document.getElementById(countId).textContent = spans.length;
   }
 
   const ctx = document.getElementById('radarChart').getContext('2d');
@@ -110,32 +149,23 @@
     type: 'radar',
     data: {
       labels: categories.map(c => c.name),
-      datasets: [{
-        label: 'Life Balance',
-        data: points,
-        backgroundColor: 'rgba(0, 123, 255, 0.2)',
-        borderColor: 'rgba(0, 123, 255, 1)',
-        borderWidth: 2,
-        pointBackgroundColor: 'rgba(0, 123, 255, 1)'
-      }]
+      datasets: [{ label: 'Life Balance', data: points, backgroundColor: 'rgba(0,123,255,0.2)', borderColor: 'rgba(0,123,255,1)', borderWidth: 2, pointBackgroundColor: 'rgba(0,123,255,1)' }]
     },
     options: {
-      responsive: true,
-      scales: {
-        r: {
-          angleLines: { display: true },
-          suggestedMin: 0,
-          suggestedMax: 4
-        }
-      }
+      scales: { r: { angleLines: { display: true }, suggestedMin: 0, suggestedMax: 20 } }
     }
   });
 
   function updateChart() {
+    points = categories.map((c, ci) => {
+      return c.habits.reduce((sum, _, hi) => {
+        const calId = `cat${ci}_hab${hi}`;
+        return sum + document.querySelectorAll(`#${calId} .completed`).length;
+      }, 0);
+    });
     radarChart.data.datasets[0].data = points;
     radarChart.update();
   }
 </script>
-
 </body>
 </html>
